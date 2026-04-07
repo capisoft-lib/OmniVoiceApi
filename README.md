@@ -1,4 +1,4 @@
-# OmniVoice 🌍
+# OmniVoice — text-to-speech API & clients
 
 <p align="center">
   <img width="200" height="200" alt="OmniVoice" src="https://zhu-han.github.io/omnivoice/pics/omnivoice.jpg" />
@@ -9,55 +9,61 @@
   &nbsp;
   <a href="https://huggingface.co/spaces/k2-fsa/OmniVoice"><img src="https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Space-blue" alt="Hugging Face Space"></a>
   &nbsp;
-  <a href="https://arxiv.org/abs/2604.00688"><img src="https://img.shields.io/badge/arXiv-Paper-B31B1B.svg"></a>
+  <a href="https://arxiv.org/abs/2604.00688"><img src="https://img.shields.io/badge/arXiv-Paper-B31B1B.svg" alt="arXiv"></a>
   &nbsp;
-  <a href="https://zhu-han.github.io/omnivoice"><img src="https://img.shields.io/badge/GitHub.io-Demo_Page-blue?logo=GitHub&style=flat-square"></a>
-</p>
-
-OmniVoice is a state-of-the-art massive multilingual zero-shot text-to-speech (TTS) model supporting over 600 languages. Built on a novel diffusion language model-style architecture, it generates high-quality speech with superior inference speed, supporting voice cloning and voice design.
-
-**Contents**: [OmniVoiceApi](#omnivoiceapi-monorepo) | [Key Features](#key-features) | [Installation](#installation) | [Quick Start](#quick-start) | [Python API](#python-api) | [Command-Line Tools](#command-line-tools) | [Training & Evaluation](#training--evaluation) | [Discussion](#discussion--communication) | [Citation](#citation)
-
----
-
-## OmniVoiceApi (monorepo)
-
-<p align="center">
+  <a href="https://zhu-han.github.io/omnivoice"><img src="https://img.shields.io/badge/GitHub.io-Demo_Page-blue?logo=GitHub&style=flat-square" alt="Demo"></a>
+  &nbsp;
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" alt="License"></a>
 </p>
 
-**OmniVoiceApi** is a production-oriented layout around the same FastAPI service: HTTP TTS API, Docker image, Python console client, **OmniVoice.Client** (.NET 8), and a sample **.NET MAUI** app.
+**OmniVoice** is a multilingual zero-shot text-to-speech model (voice cloning, voice design, 600+ languages). **This repository** packages it as **OmniVoiceApi**: a production-style monorepo with a **FastAPI** server, **Docker** (CUDA), Python and **.NET** clients, and a sample **MAUI** app — similar in spirit to our speech-to-text stack, but focused entirely on **TTS**.
 
-High-level architecture: [docs/architecture.md](docs/architecture.md).
+> **Speech-to-text in the same family:** for transcription and translation over HTTP, see **[FastWhisperApi](https://github.com/capisoft-lib/FastWhisperApi)** (faster-whisper). OmniVoice here is **speech synthesis**, not Whisper.
 
-### Repository layout
+**Jump to:** [Repository layout](#repository-layout) · [Quick start](#quick-start) · [HTTP API](#http-api) · [Docker Hub](#5-docker-api-cuda) · [Model features](#model-features) · [Python library & CLI](#python-package-installation) · [Citation](#citation)
+
+---
+
+## Repository layout
 
 ```
 apps/
-  api/                    # uvicorn entry + API docs (README-API.md)
+  api/                      # uvicorn entry, OpenAPI (see README-API.md)
 examples/
-  console-ui/             # Python: synthesize_and_save.py
-  maui/                   # .NET MAUI sample (OmniVoiceApi.Maui)
+  console-ui/               # Python client: synthesize via HTTP
+  maui/                     # .NET MAUI sample (OmniVoiceApi.Maui)
 infra/
-  docker/                 # Dockerfile, docker-compose.yml
+  docker/                   # Dockerfile, compose, deploy scripts
 libraries/
-  OmniVoice.Client/     # .NET client + example console app
+  OmniVoice.Client/         # .NET client (NuGet: OmniVoice.Client)
+omnivoice/                  # Core model package + CLIs (omnivoice-api, omnivoice-demo, …)
+docs/                       # Voice design, generation params, languages, …
 ```
+
+Architecture notes: [docs/architecture.md](docs/architecture.md).
+
+---
+
+## Quick start
 
 ### 1) API (local Python)
 
 ```bash
 python -m venv .venv
-.\.venv\Scripts\activate   # Windows
-# source .venv/bin/activate  # Linux/macOS
+# Windows PowerShell:
+.\.venv\Scripts\Activate.ps1
+# Linux / macOS:
+# source .venv/bin/activate
+
 pip install torch==2.8.0 torchaudio==2.8.0 --extra-index-url https://download.pytorch.org/whl/cu128
 pip install -e ".[api]"
+
 uvicorn app.main:app --host 0.0.0.0 --port 8765 --app-dir apps/api
 ```
 
-Or: `omnivoice-api --host 0.0.0.0 --port 8765`
+Or run the same app via: `omnivoice-api --host 0.0.0.0 --port 8765` (optional: `--voices-dir`, `--device cuda|cpu|mps`).
 
-Copy [.env.example](.env.example) to `.env` and set `OMNIVOICE_*` as needed. Full HTTP reference: [apps/api/README-API.md](apps/api/README-API.md).
+Copy [.env.example](.env.example) to `.env` and set `OMNIVOICE_*` if needed. Full HTTP reference: [apps/api/README-API.md](apps/api/README-API.md).
 
 ### 2) Console example (Python)
 
@@ -66,303 +72,162 @@ pip install -r examples/console-ui/requirements-recorder.txt
 python examples/console-ui/synthesize_and_save.py --url http://127.0.0.1:8765 --text "Bonjour."
 ```
 
-### 3) C# client library
+### 3) C# client
 
 ```bash
 dotnet build libraries/OmniVoice.Client/OmniVoice.Client.sln
 dotnet run --project libraries/OmniVoice.Client/examples/OmniVoice.Client.Example -- http://127.0.0.1:8765
 ```
 
-See [libraries/OmniVoice.Client/README.md](libraries/OmniVoice.Client/README.md).
+Package: `dotnet add package OmniVoice.Client` — details: [libraries/OmniVoice.Client/README.md](libraries/OmniVoice.Client/README.md).
 
-### 4) MAUI sample app
+### 4) MAUI sample
 
-Open `examples/maui/OmniVoiceApi.Maui/OmniVoiceApi.Maui.csproj` in Visual Studio or run:
+Open `examples/maui/OmniVoiceApi.Maui/OmniVoiceApi.Maui.csproj` in Visual Studio, or:
 
 ```bash
 dotnet build examples/maui/OmniVoiceApi.Maui/OmniVoiceApi.Maui.csproj -f net9.0-windows10.0.19041.0
 ```
 
-Targets: **Windows** (tested build), **Android** (cleartext HTTP enabled for dev; use `http://10.0.2.2:8765` from the emulator). iOS / Mac Catalyst are included by the template but not validated here.
+**Windows** build is tested; **Android** is set up for dev (cleartext HTTP; emulator often uses `http://10.0.2.2:8765`). iOS / Mac Catalyst targets exist but are not validated in this repo.
 
 ### 5) Docker API (CUDA)
 
-GPU image (`omnivoice-api:cuda12.8`, base NVIDIA CUDA 12.8 + PyTorch cu128). Requires [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html) on the host.
+Pre-built image (GPU, NVIDIA Container Toolkit required on the host):
+
+```bash
+docker pull capitaine/omnivoice-api:cuda12.8
+# or: capitaine/omnivoice-api:latest
+```
+
+From source:
 
 ```bash
 docker compose -f infra/docker/docker-compose.yml up --build
 ```
 
-Or: `pwsh -File infra/docker/deploy.ps1` / `bash infra/docker/deploy.sh`
+Or: `pwsh -File infra/docker/deploy.ps1` / `bash infra/docker/deploy.sh`.
 
-Details: [infra/docker/README.md](infra/docker/README.md).
-
----
-
-## Key Features
-
-- **600+ Languages Supported**: The broadest language coverage among zero-shot TTS models ([full list](docs/languages.md)).
-- **Voice Cloning**: State-of-the-art voice cloning quality.
-- **Voice Design**: Control voices via assigned speaker attributes (gender, age, pitch, dialect/accent, whisper, etc.).
-- **Fine-grained Control**: Non-verbal symbols (e.g., `[laughter]`) and pronunciation correction via pinyin or phonemes.
-- **Fast Inference**: RTF as low as 0.025 (40x faster than real-time).
-- **Diffusion Language Model-Style Architecture**: A clean, streamlined, and scalable design that delivers both quality and speed.
+**Docker Hub:** [capitaine/omnivoice-api](https://hub.docker.com/r/capitaine/omnivoice-api). Persistent caches and voices: see [infra/docker/README.md](infra/docker/README.md).
 
 ---
 
-## Installation
+## HTTP API
 
-Choose **one** of the following methods: **pip** or **uv**.
+The server keeps **one loaded model** and exposes:
 
-### pip
+| Endpoint | Role |
+|----------|------|
+| `POST /tts` | JSON in → mono **WAV** out |
+| `POST /tts/stream` | Phrase-split synthesis; streamed **wav-first-pcm-tail-v1** (first frame full PCM16 WAV, then raw s16le tails to concatenate) |
+| `POST /voices` | Upload reference audio for cloning |
+| `GET /health` | Status |
 
-> We recommend using a fresh virtual environment (e.g., `conda`, `venv`, etc.) to avoid conflicts.
+Interactive docs: **`/docs`** (Swagger). Streaming format and client merge example: [apps/api/README-API.md](apps/api/README-API.md).
 
-**Step 1**: Install PyTorch
+---
 
-<details>
-<summary>NVIDIA GPU</summary>
+## Model features
 
-```bash
-# Install pytorch with your CUDA version, e.g.
-pip install torch==2.8.0+cu128 torchaudio==2.8.0+cu128 --extra-index-url https://download.pytorch.org/whl/cu128
-```
-> See [PyTorch official site](https://pytorch.org/get-started/locally/) for other versions installation.
+- **600+ languages** — see [docs/languages.md](docs/languages.md).
+- **Voice cloning** from short reference audio.
+- **Voice design** via natural-language instructions (no reference) — [docs/voice-design.md](docs/voice-design.md).
+- **Auto voice** when no reference or instruction is given.
+- **Control**: non-verbal tags (e.g. `[laughter]`), pronunciation hints; tunable steps, speed, duration — [docs/generation-parameters.md](docs/generation-parameters.md).
+- **Fast inference** — diffusion LM–style architecture; see the [paper](https://arxiv.org/abs/2604.00688).
 
-</details>
+---
 
-<details>
-<summary>Apple Silicon</summary>
+## Python package installation
 
-```bash
-pip install torch==2.8.0 torchaudio==2.8.0
-```
-
-</details>
-
-**Step 2**: Install OmniVoice (choose one)
+Use a fresh virtual environment. Install **PyTorch** for your platform ([pytorch.org](https://pytorch.org/get-started/locally/)), then OmniVoice:
 
 ```bash
-# From PyPI (stable release)
+# PyPI
 pip install omnivoice
 
-# From the latest source on GitHub (no need to clone)
+# Latest upstream source (no clone)
 pip install git+https://github.com/k2-fsa/OmniVoice.git
 
-# For development (clone first, editable install)
+# Editable from a clone
 git clone https://github.com/k2-fsa/OmniVoice.git
 cd OmniVoice
 pip install -e .
 ```
 
-### uv
-
-Clone the repository and sync dependencies:
-
-```bash
-git clone https://github.com/k2-fsa/OmniVoice.git
-cd OmniVoice
-uv sync
-```
-
-> **Tip**: Can use mirror with `uv sync --default-index "https://mirrors.aliyun.com/pypi/simple"`
+**uv:** `git clone` … `cd OmniVoice` → `uv sync` (optional mirror: `uv sync --default-index "https://mirrors.aliyun.com/pypi/simple"`).
 
 ---
 
-## Quick Start
+## Try the model (Gradio / Hugging Face)
 
-Try OmniVoice without coding:
+- Local UI: `omnivoice-demo --ip 0.0.0.0 --port 8001`
+- Hosted: [Hugging Face Space — k2-fsa/OmniVoice](https://huggingface.co/spaces/k2-fsa/OmniVoice)
 
-- Launch the local web UI: `omnivoice-demo --ip 0.0.0.0 --port 8001`
-
-
-- Or try it directly on [HuggingFace Space](https://huggingface.co/spaces/k2-fsa/OmniVoice)
-
-> If you have trouble connecting to HuggingFace when downloading the pre-trained models, set `export HF_ENDPOINT="https://hf-mirror.com"` before running.
-
-For full usage, see the [Python API](#python-api) and [Command-Line Tools](#command-line-tools) sections below.
+If Hub downloads fail, try `export HF_ENDPOINT="https://hf-mirror.com"` (or your preferred mirror).
 
 ---
 
-## Python API
+## Python API (library)
 
-OmniVoice supports three generation modes. All features in this section are also available via [command-line tools](#command-line-tools).
-
-### Voice Cloning
-
-Clone a voice from a short reference audio. Provide `ref_audio` and `ref_text`:
+Voice cloning (with optional `ref_text`; omit to use ASR / sidecar):
 
 ```python
 from omnivoice import OmniVoice
 import torch
 import torchaudio
 
-model = OmniVoice.from_pretrained(
-    "k2-fsa/OmniVoice",
-    device_map="cuda:0",
-    dtype=torch.float16
-)
-# Apple Silicon users: use device_map="mps" instead
+model = OmniVoice.from_pretrained("k2-fsa/OmniVoice", device_map="cuda:0", dtype=torch.float16)
+# Apple Silicon: device_map="mps"
 
 audio = model.generate(
     text="Hello, this is a test of zero-shot voice cloning.",
     ref_audio="ref.wav",
     ref_text="Transcription of the reference audio.",
-) # audio is a list of `torch.Tensor` with shape (1, T) at 24 kHz.
-
-# If you don't want to input `ref_text` manually, you can directly omit the `ref_text`.
-# The model will use Whisper ASR to auto-transcribe it.
-
-torchaudio.save("out.wav", audio[0], 24000)
-```
-
-### Voice Design
-
-Describe the desired voice with speaker attributes — no reference audio needed.
-Supported attributes: **gender** (male/female), **age** (child to elderly),
-**pitch** (very low to very high), **style** (whisper), **English accent**
-(American, British, etc.), and **Chinese dialect** (四川话, 陕西话, etc.).
-Attributes are comma-separated and freely combinable across categories.
-
-```python
-audio = model.generate(
-    text="Hello, this is a test of zero-shot voice design.",
-    instruct="female, low pitch, british accent",
 )
+torchaudio.save("out.wav", audio[0], model.sampling_rate)
 ```
 
-See [docs/voice-design.md](docs/voice-design.md) for the full attribute
-reference, Chinese equivalents, and usage tips.
-
-### Auto Voice
-
-Let the model choose a voice automatically:
-
-```python
-audio = model.generate(text="This is a sentence without any voice prompt.")
-```
-
-### Generation Parameters
-
-All above three modes share the same `model.generate()` API. You can further control the generation behavior via keyword arguments:
-
-```python
-audio = model.generate(
-    text="...",
-    num_step=32,  # diffusion steps (or 16 for faster inference)
-    speed=1.0,     # speed factor (>1.0 faster, <1.0 slower)
-    duration=10.0, # fixed output duration in seconds (overrides speed)
-    # ... more options
-)
-```
-See more detailed control in [docs/generation-parameters.md](docs/generation-parameters.md).
-
-### Non-Verbal & Pronunciation Control
-
-OmniVoice supports inline **non-verbal symbols** and **pronunciation correction** within the input text.
-
-**Non-verbal symbols**: Insert tags like `[laughter]` directly in the text to add expressive non-verbal sounds.
-
-```python
-audio = model.generate(text="[laughter] You really got me. I didn't see that coming at all.")
-```
-
-Supported tags: `[laughter]`, `[sigh]`, `[confirmation-en]`, `[question-en]`, `[question-ah]`, `[question-oh]`, `[question-ei]`, `[question-yi]`, `[surprise-ah]`, `[surprise-oh]`, `[surprise-wa]`, `[surprise-yo]`, `[dissatisfaction-hnn]`.
-
-**Pronunciation control (Chinese)**: Use pinyin with tone numbers to correct specific character pronunciations.
-
-```python
-audio = model.generate(text="这批货物打ZHE2出售后他严重SHE2本了，再也经不起ZHE1腾了。")
-```
-
-**Pronunciation control (English)**: Use [CMU pronunciation dictionary](https://svn.code.sf.net/p/cmusphinx/code/trunk/cmudict/cmudict.0.7a)  (uppercase, in brackets) to override default English pronunciations.
-
-```python
-audio = model.generate(text="You could probably still make [IH1 T] look good.")
-```
+Voice design and auto voice use the same `generate()` API; see [docs/voice-design.md](docs/voice-design.md) and [docs/generation-parameters.md](docs/generation-parameters.md).
 
 ---
 
-## Command-Line Tools
+## Command-line tools
 
-Three CLI entry points are provided. The CLI tools support all features available in the Python API (voice cloning, voice design, auto voice, generation parameters, etc.) — all controlled via command-line arguments.
+| Command | Description |
+|---------|-------------|
+| `omnivoice-demo` | Gradio web UI — [omnivoice/cli/demo.py](omnivoice/cli/demo.py) |
+| `omnivoice-api` | OmniVoiceApi HTTP server — [omnivoice/cli/api_server.py](omnivoice/cli/api_server.py) |
+| `omnivoice-infer` | Single utterance to WAV — [omnivoice/cli/infer.py](omnivoice/cli/infer.py) |
+| `omnivoice-infer-batch` | Multi-GPU batch (JSONL) — [omnivoice/cli/infer_batch.py](omnivoice/cli/infer_batch.py) |
 
-| Command | Description | Source |
-|---|---|---|
-| `omnivoice-demo` | Interactive Gradio web demo | [omnivoice/cli/demo.py](omnivoice/cli/demo.py) |
-| `omnivoice-api` | OmniVoiceApi HTTP server (TTS + voice upload) | [omnivoice/cli/api_server.py](omnivoice/cli/api_server.py) |
-| `omnivoice-infer` | Single-item inference | [omnivoice/cli/infer.py](omnivoice/cli/infer.py) |
-| `omnivoice-infer-batch` | Batch inference across multiple GPUs | [omnivoice/cli/infer_batch.py](omnivoice/cli/infer_batch.py) |
-
-### Demo
-
-```bash
-omnivoice-demo --ip 0.0.0.0 --port 8001
-```
-
-Provides a web UI for voice cloning and voice design. See `omnivoice-demo --help` for all options.
-
-### Single Inference
-
-```bash
-# Voice Cloning
-# ref_text can be omitted (Whisper will auto-transcribe ref_audio to get it).
-omnivoice-infer \
-    --model k2-fsa/OmniVoice \
-    --text "This is a test for text to speech." \
-    --ref_audio ref.wav \
-    --ref_text "Transcription of the reference audio." \
-    --output hello.wav
-
-# Voice Design
-omnivoice-infer --model k2-fsa/OmniVoice \
-    --text "This is a test for text to speech." \
-    --instruct "male, British accent" \
-    --output hello.wav
-
-# Auto Voice
-omnivoice-infer \
-    --model k2-fsa/OmniVoice \
-    --text "This is a test for text to speech."\
-    --output hello.wav
-```
-
-### Batch Inference
-
-`omnivoice-infer-batch` can distribute batch inference across multiple GPUs, designed for large-scale TTS tasks.
-
-```bash
-omnivoice-infer-batch \
-    --model k2-fsa/OmniVoice \
-    --test_list test.jsonl \
-    --res_dir results/
-```
-
-The test list is a JSONL file where each line is a JSON object:
-```json
-{"id": "sample_001", "text": "Hello world", "ref_audio": "/path/to/ref.wav", "ref_text": "Reference transcript", "instruct": "female, british accent", "language_id": "en", "language_name": "English", "duration": 10.0, "speed": 1.0}
-```
-Only `id` and `text` are mandatory fields. `ref_audio` and `ref_text` are used in voice cloning mode. `instruct` is used in voice design mode. If no reference audio or instruct are provided, the model will generate text in a random voice.
-
-`language_id`, `language_name`, `duration`, and `speed` are optional. `duration` (in seconds) fixes the output length; `speed` controls the speaking rate. If `duration` and `speed` are both provided, `speed` will be ignored.
+Run `--help` on any command. For batch JSONL fields, see `infer_batch.py` or the [upstream OmniVoice repo](https://github.com/k2-fsa/OmniVoice).
 
 ---
 
-## Training & Evaluation
+## Training & evaluation
 
-See [examples/](examples/) for the complete pipeline — from data preparation to training, evaluation, and finetuning.
+Pipelines and configs live under [examples/](examples/). Upstream discussions: [k2-fsa/OmniVoice issues](https://github.com/k2-fsa/OmniVoice/issues).
 
 ---
 
-## Discussion & Communication
+## Security & contributing
 
-You can directly discuss on [GitHub Issues](https://github.com/k2-fsa/OmniVoice/issues).
+- [SECURITY.md](SECURITY.md)
+- [CONTRIBUTING.md](CONTRIBUTING.md)
+- [CHANGELOG.md](CHANGELOG.md)
 
-You can also scan the QR code to join our wechat group or follow our wechat official account.
+---
+
+## Discussion (upstream model)
+
+[GitHub Issues — k2-fsa/OmniVoice](https://github.com/k2-fsa/OmniVoice/issues)
+
+WeChat group / official account (K2-FSA):
 
 | Wechat Group | Wechat Official Account |
 | ------------ | ----------------------- |
-|![wechat](https://k2-fsa.org/zh-CN/assets/pic/wechat_group.jpg) |![wechat](https://k2-fsa.org/zh-CN/assets/pic/wechat_account.jpg) |
+| ![wechat](https://k2-fsa.org/zh-CN/assets/pic/wechat_group.jpg) | ![wechat](https://k2-fsa.org/zh-CN/assets/pic/wechat_account.jpg) |
 
 ---
 
