@@ -2,7 +2,7 @@
 # Build from repository root:
 #   docker build -f infra/docker/Dockerfile -t omnivoice-api:latest .
 
-FROM python:3.11-slim-bookworm
+FROM python:3.14-slim-bookworm
 
 ENV PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
