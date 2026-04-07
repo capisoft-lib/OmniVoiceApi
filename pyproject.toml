@@ -44,6 +44,11 @@ dependencies = [
 
 [project.optional-dependencies]
 
+api = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+]
+
 eval = [
     "jiwer==3.1.0",       # WER
     "librosa",             # Audio processing
@@ -58,6 +63,7 @@ eval = [
 omnivoice-infer = "omnivoice.cli.infer:main"
 omnivoice-infer-batch = "omnivoice.cli.infer_batch:main"
 omnivoice-demo = "omnivoice.cli.demo:main"
+omnivoice-api = "omnivoice.cli.api_server:main"
 
 [project.urls]
 Homepage = "https://github.com/k2-fsa/OmniVoice"

@@ -1,0 +1,18 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>OmniVoice.Client</RootNamespace>
+    <AssemblyName>OmniVoice.Client</AssemblyName>
+    <Version>0.1.0</Version>
+    <Authors>OmniVoiceApi</Authors>
+    <Description>HTTP client for OmniVoiceApi — multilingual zero-shot TTS.</Description>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+    <PackageTags>tts;omnivoice;httpclient</PackageTags>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);1591</NoWarn>
+  </PropertyGroup>
+
+</Project>

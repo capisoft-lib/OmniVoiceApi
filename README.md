@@ -16,7 +16,84 @@
 
 OmniVoice is a state-of-the-art massive multilingual zero-shot text-to-speech (TTS) model supporting over 600 languages. Built on a novel diffusion language model-style architecture, it generates high-quality speech with superior inference speed, supporting voice cloning and voice design.
 
-**Contents**: [Key Features](#key-features) | [Installation](#installation) | [Quick Start](#quick-start) | [Python API](#python-api) | [Command-Line Tools](#command-line-tools) | [Training & Evaluation](#training--evaluation) | [Discussion](#discussion--communication) | [Citation](#citation)
+**Contents**: [OmniVoiceApi](#omnivoiceapi-monorepo) | [Key Features](#key-features) | [Installation](#installation) | [Quick Start](#quick-start) | [Python API](#python-api) | [Command-Line Tools](#command-line-tools) | [Training & Evaluation](#training--evaluation) | [Discussion](#discussion--communication) | [Citation](#citation)
+
+---
+
+## OmniVoiceApi (monorepo)
+
+<p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" alt="License"></a>
+</p>
+
+**OmniVoiceApi** is a production-oriented layout around the same FastAPI service: HTTP TTS API, Docker image, Python console client, **OmniVoice.Client** (.NET 8), and a sample **.NET MAUI** app.
+
+High-level architecture: [docs/architecture.md](docs/architecture.md).
+
+### Repository layout
+
+```
+apps/
+  api/                    # uvicorn entry + API docs (README-API.md)
+examples/
+  console-ui/             # Python: synthesize_and_save.py
+  maui/                   # .NET MAUI sample (OmniVoiceApi.Maui)
+infra/
+  docker/                 # Dockerfile, docker-compose.yml
+libraries/
+  OmniVoice.Client/     # .NET client + example console app
+```
+
+### 1) API (local Python)
+
+```bash
+python -m venv .venv
+.\.venv\Scripts\activate   # Windows
+# source .venv/bin/activate  # Linux/macOS
+pip install torch==2.8.0 torchaudio==2.8.0 --extra-index-url https://download.pytorch.org/whl/cu128
+pip install -e ".[api]"
+uvicorn app.main:app --host 0.0.0.0 --port 8765 --app-dir apps/api
+```
+
+Or: `omnivoice-api --host 0.0.0.0 --port 8765`
+
+Copy [.env.example](.env.example) to `.env` and set `OMNIVOICE_*` as needed. Full HTTP reference: [apps/api/README-API.md](apps/api/README-API.md).
+
+### 2) Console example (Python)
+
+```bash
+pip install -r examples/console-ui/requirements-recorder.txt
+python examples/console-ui/synthesize_and_save.py --url http://127.0.0.1:8765 --text "Bonjour."
+```
+
+### 3) C# client library
+
+```bash
+dotnet build libraries/OmniVoice.Client/OmniVoice.Client.sln
+dotnet run --project libraries/OmniVoice.Client/examples/OmniVoice.Client.Example -- http://127.0.0.1:8765
+```
+
+See [libraries/OmniVoice.Client/README.md](libraries/OmniVoice.Client/README.md).
+
+### 4) MAUI sample app
+
+Open `examples/maui/OmniVoiceApi.Maui/OmniVoiceApi.Maui.csproj` in Visual Studio or run:
+
+```bash
+dotnet build examples/maui/OmniVoiceApi.Maui/OmniVoiceApi.Maui.csproj -f net9.0-windows10.0.19041.0
+```
+
+Targets: **Windows** (tested build), **Android** (cleartext HTTP enabled for dev; use `http://10.0.2.2:8765` from the emulator). iOS / Mac Catalyst are included by the template but not validated here.
+
+### 5) Docker API
+
+```bash
+docker compose -f infra/docker/docker-compose.yml up --build
+```
+
+Details: [infra/docker/README.md](infra/docker/README.md).
+
+---
 
 ## Key Features
 
@@ -209,6 +286,7 @@ Three CLI entry points are provided. The CLI tools support all features availabl
 | Command | Description | Source |
 |---|---|---|
 | `omnivoice-demo` | Interactive Gradio web demo | [omnivoice/cli/demo.py](omnivoice/cli/demo.py) |
+| `omnivoice-api` | OmniVoiceApi HTTP server (TTS + voice upload) | [omnivoice/cli/api_server.py](omnivoice/cli/api_server.py) |
 | `omnivoice-infer` | Single-item inference | [omnivoice/cli/infer.py](omnivoice/cli/infer.py) |
 | `omnivoice-infer-batch` | Batch inference across multiple GPUs | [omnivoice/cli/infer_batch.py](omnivoice/cli/infer_batch.py) |
 

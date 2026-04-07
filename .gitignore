@@ -1,17 +1,64 @@
-__pycache__/
-*.pyc
-*.pyo
-*.egg-info/
-*.egg
-dist/
-build/
-.venv/
-.env
+# OS
 .DS_Store
+Thumbs.db
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
-*.so
+.coverage
+htmlcov/
+.venv/
+venv/
+env/
+*.egg-info/
+dist/
+build/
+*.egg
+
+# .NET / MAUI
+bin/
+obj/
+.vs/
+*.user
+*.suo
+*.cache
+
+# IDE
+.idea/
+.vscode/
+
+# Cursor / local tooling
+.cursor/
+mcps/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.pfx
+
+# Local artifacts & media (no voice samples in repo)
+*.wav
+*.mp3
+*.m4a
+*.flac
+*.aac
+*.ogg
+output.json
+last.wav
+last_recording.wav
+*.whl
+artifacts/
+*.nupkg
+
+# OmniVoice research / training (local)
 /.cache*
 /exp*/
 /.tmp/
@@ -25,6 +72,5 @@ results/
 examples/data*
 examples/download*
 examples/exp*/
-.claude/
-*.wav
 *.jsonl
+.claude/

@@ -1,0 +1,6 @@
+# OmniVoiceApi — install the library from the repo root first, then API extras:
+#   pip install -e ".[api]"
+#
+# Or pin runtime deps when not using pyproject (after torch/transformers stack):
+fastapi>=0.115.0
+uvicorn[standard]>=0.32.0

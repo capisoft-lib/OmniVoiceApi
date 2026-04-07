@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/examples/">
+    <Project Path="examples/OmniVoice.Client.Example/OmniVoice.Client.Example.csproj" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/OmniVoice.Client/OmniVoice.Client.csproj" />
+  </Folder>
+</Solution>

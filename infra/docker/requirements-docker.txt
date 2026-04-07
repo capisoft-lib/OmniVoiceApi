@@ -1,0 +1,3 @@
+# Docker image: install from repo root with GPU PyTorch (see Dockerfile extra-index).
+# Not used standalone — the Dockerfile runs `pip install` with `-e` and extra index.
+-e .[api]

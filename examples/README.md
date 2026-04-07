@@ -2,6 +2,15 @@
 
 This directory contains scripts and configs for training, fine-tuning, and evaluating OmniVoice.
 
+**OmniVoiceApi** samples (HTTP client / MAUI) live in subfolders:
+
+- [console-ui/](console-ui/) — Python script calling `POST /tts`
+- [maui/](maui/) — .NET MAUI app using `OmniVoice.Client`
+
+---
+
+## Training & evaluation (original layout)
+
 | Use Case | Script | Description |
 |---|---|---|
 | Training from scratch | [run_emilia.sh](run_emilia.sh) | Full pipeline on the Emilia dataset (data check, tokenization, training) |

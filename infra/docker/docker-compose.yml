@@ -1,0 +1,21 @@
+services:
+  omnivoice-api:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile
+    image: omnivoice-api:latest
+    ports:
+      - "8765:8765"
+    environment:
+      OMNIVOICE_MODEL: ${OMNIVOICE_MODEL:-k2-fsa/OmniVoice}
+      OMNIVOICE_VOICES_DIR: /data/voices
+      OMNIVOICE_DEVICE: ${OMNIVOICE_DEVICE:-cuda}
+      HF_HOME: /root/.cache/huggingface
+    volumes:
+      - hf_cache:/root/.cache/huggingface
+      - voices_data:/data/voices
+    gpus: all
+
+volumes:
+  hf_cache:
+  voices_data:
