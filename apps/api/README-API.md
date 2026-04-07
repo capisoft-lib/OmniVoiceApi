@@ -60,6 +60,61 @@ curl -sS -X POST "http://127.0.0.1:8765/tts" \
   -o out.wav
 ```
 
+### `POST /tts/stream`
+
+Same JSON body as **`POST /tts`** (`TtsRequest`). The server **splits `text` into phrases** using punctuation (`.`, `!`, `?`, `…`, `。`, `！`, `？`, paragraph breaks), synthesizes each phrase, and streams **one continuous utterance**: the first frame is a **mono 16-bit PCM WAV** for phrase 1; each later frame is **raw PCM s16le** (same sample rate) to append after the previous phrase’s samples. Bytes are sent after each phrase completes (pseudo-streaming).
+
+**Response:** `200` with `Content-Type: application/octet-stream` and header:
+
+`X-OmniVoice-Stream-Format: wav-first-pcm-tail-v1`
+
+**Framing:** repeated blocks of:
+
+1. **4 bytes** — unsigned big-endian length `N` of the following payload  
+2. **N bytes** — first block: complete WAV; following blocks: mono PCM s16le to concatenate in time order
+
+**Example (Python consumer — merge into one WAV):**
+
+```python
+import io
+import struct
+import wave
+
+import httpx
+
+r = httpx.post(
+    "http://127.0.0.1:8765/tts/stream",
+    json={"text": "Bonjour. Comment allez-vous ?", "language": "French"},
+    timeout=600.0,
+)
+r.raise_for_status()
+assert r.headers.get("X-OmniVoice-Stream-Format") == "wav-first-pcm-tail-v1"
+data = r.content
+i = 0
+first_wav: bytes | None = None
+pcm_tail = bytearray()
+while i + 4 <= len(data):
+    n = struct.unpack(">I", data[i : i + 4])[0]
+    i += 4
+    payload = data[i : i + n]
+    i += n
+    if first_wav is None:
+        first_wav = payload
+    else:
+        pcm_tail.extend(payload)
+
+assert first_wav is not None
+with wave.open(io.BytesIO(first_wav), "rb") as wf_in:
+    params = wf_in.getparams()
+    frames = wf_in.readframes(wf_in.getnframes()) + bytes(pcm_tail)
+
+with wave.open("out_stream_merged.wav", "wb") as wf_out:
+    wf_out.setparams(params)
+    wf_out.writeframes(frames)
+```
+
+For **true streaming** over the wire, use `httpx` or `requests` with `stream=True` and parse length-prefixed blocks as they arrive instead of buffering `r.content`.
+
 ### `POST /voices`
 
 Multipart form:

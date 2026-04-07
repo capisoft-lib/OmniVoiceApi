@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import argparse
+import io
 import logging
 import os
+import struct
 import tempfile
+import wave
 from pathlib import Path
 from contextlib import asynccontextmanager
 from typing import Annotated, Optional
@@ -14,9 +17,11 @@ import torch
 import torchaudio
 import uvicorn
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
-from fastapi.responses import RedirectResponse, Response
+from fastapi.responses import RedirectResponse, Response, StreamingResponse
 from pydantic import BaseModel, Field
+from starlette.concurrency import run_in_threadpool
 
+from omnivoice.api.phrases import split_into_phrases
 from omnivoice.api.settings import default_voices_dir, resolve_api_config
 from omnivoice.models.omnivoice import OmniVoice
 
@@ -48,6 +53,12 @@ Interactive **Swagger UI**: [`/docs`](/docs) (alias [`/swagger`](/swagger)) · *
 """
 
 MAX_VOICE_UPLOAD_BYTES = 50 * 1024 * 1024
+
+# POST /tts/stream body: [4-byte big-endian length][payload] per phrase.
+# First payload: full WAV (phrase 1). Later payloads: raw PCM from the WAV data chunk
+# (same encoding as inside the first WAV, typically mono s16le) to append in time order.
+STREAM_FORMAT_HEADER = "X-OmniVoice-Stream-Format"
+STREAM_FORMAT_VALUE = "wav-first-pcm-tail-v1"
 
 
 def get_best_device() -> str:
@@ -174,6 +185,80 @@ def _write_mono_wav_resampled(
                     os.unlink(p)
                 except OSError:
                     pass
+
+
+def _mono_waveform_from_generate(
+    model: OmniVoice,
+    *,
+    text: str,
+    language: str,
+    ref_audio: str | None,
+    ref_text: str | None,
+) -> torch.Tensor:
+    audios = model.generate(
+        text=text,
+        language=language,
+        ref_audio=ref_audio,
+        ref_text=ref_text,
+    )
+    wav = audios[0]
+    if wav.dim() == 1:
+        wav = wav.unsqueeze(0)
+    if wav.shape[0] > 1:
+        wav = wav.mean(dim=0, keepdim=True)
+    return wav
+
+
+def _wav_bytes_from_generate(
+    model: OmniVoice,
+    *,
+    text: str,
+    language: str,
+    ref_audio: str | None,
+    ref_text: str | None,
+) -> bytes:
+    wav = _mono_waveform_from_generate(
+        model,
+        text=text,
+        language=language,
+        ref_audio=ref_audio,
+        ref_text=ref_text,
+    )
+    buf = io.BytesIO()
+    torchaudio.save(buf, wav, model.sampling_rate, format="wav")
+    return buf.getvalue()
+
+
+def _wav_bytes_pcm_s16_mono(*, sample_rate: int, wav: torch.Tensor) -> bytes:
+    """Mono 16-bit PCM WAV (stream first frame)."""
+    buf = io.BytesIO()
+    torchaudio.save(
+        buf,
+        wav,
+        sample_rate,
+        format="wav",
+        encoding="PCM_S",
+        bits_per_sample=16,
+    )
+    return buf.getvalue()
+
+
+def _pcm_s16le_mono_payload_match_torchaudio(
+    *, sample_rate: int, wav: torch.Tensor
+) -> bytes:
+    """Same PCM bytes torchaudio would put in a mono PCM_S WAV `data` chunk (for stream tails)."""
+    buf = io.BytesIO()
+    torchaudio.save(
+        buf,
+        wav,
+        sample_rate,
+        format="wav",
+        encoding="PCM_S",
+        bits_per_sample=16,
+    )
+    buf.seek(0)
+    with wave.open(buf, "rb") as wf:
+        return wf.readframes(wf.getnframes())
 
 
 def create_app(
@@ -386,25 +471,131 @@ def create_app(
             log_voice = "(auto)"
 
         LOG.info("TTS: voice=%s language=%s text=%s...", log_voice, body.language, body.text[:60])
-        audios = model.generate(
+        data = _wav_bytes_from_generate(
+            model,
             text=body.text,
             language=body.language,
             ref_audio=ref_audio,
             ref_text=ref_text,
         )
 
-        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
-            out_path = tmp.name
-        try:
-            torchaudio.save(out_path, audios[0], model.sampling_rate)
-            data = Path(out_path).read_bytes()
-        finally:
-            try:
-                os.unlink(out_path)
-            except OSError:
-                pass
-
         return Response(content=data, media_type="audio/wav")
+
+    @app.get(
+        "/tts/stream",
+        tags=["tts"],
+        summary="Chunked TTS — how to call (no audio on GET)",
+        description="Use **POST /tts/stream** with the same JSON as `/tts`; response is streamed binary.",
+    )
+    def tts_stream_get_info() -> dict[str, str]:
+        return {
+            "message": "Use POST /tts/stream; response is chunked application/octet-stream.",
+            "post_body": "Same as POST /tts (TtsRequest).",
+            "stream_format_header": STREAM_FORMAT_HEADER,
+            "stream_format": STREAM_FORMAT_VALUE,
+            "docs": "/docs",
+        }
+
+    @app.post(
+        "/tts/stream",
+        tags=["tts"],
+        summary="Text-to-speech (chunked stream)",
+        description=(
+            "Splits **text** into phrases using punctuation (see `omnivoice.api.phrases.split_into_phrases`), "
+            "then synthesizes each phrase and streams **one continuous utterance**: the first frame is a full "
+            "**WAV** for phrase 1; each later frame is **mono PCM s16le** (little-endian) samples to append "
+            "in time order at the **same sample rate** as the first WAV.\n\n"
+            "**Pseudo-streaming:** bytes are sent after each phrase finishes; combine first WAV + appended PCM "
+            "for a single timeline.\n\n"
+            f"**Binary format:** repeated `uint32_be_length` + payload. "
+            f"Header `{STREAM_FORMAT_HEADER}: {STREAM_FORMAT_VALUE}` describes the framing."
+        ),
+        responses={
+            200: {
+                "description": "Chunked stream: first block WAV, then length-prefixed mono s16le PCM per phrase.",
+                "content": {
+                    "application/octet-stream": {
+                        "schema": {"type": "string", "format": "binary"},
+                    },
+                },
+                "headers": {
+                    STREAM_FORMAT_HEADER: {
+                        "description": "Framing format identifier",
+                        "schema": {"type": "string", "default": STREAM_FORMAT_VALUE},
+                    },
+                },
+            },
+            400: {"description": "No phrases after split, or invalid voice"},
+            404: {"description": "Voice WAV not found"},
+            503: {"description": "Model not ready"},
+        },
+    )
+    async def tts_stream(body: TtsRequest) -> StreamingResponse:
+        model = model_holder["model"]
+        if model is None:
+            raise HTTPException(status_code=503, detail="Model not loaded yet")
+
+        voice_key = (body.voice or "").strip()
+        if voice_key:
+            wav_path = resolve_voice_file(voice_key)
+            ref_text_resolved = ref_text_for_voice(wav_path, body.ref_text)
+            ref_audio = str(wav_path)
+            log_voice = wav_path.name
+        else:
+            ref_audio = None
+            ref_text_resolved = None
+            log_voice = "(auto)"
+
+        phrases = split_into_phrases(body.text)
+        if not phrases:
+            raise HTTPException(
+                status_code=400,
+                detail="No non-empty phrases after splitting (empty text).",
+            )
+
+        LOG.info(
+            "TTS stream: voice=%s language=%s phrases=%s first=%s...",
+            log_voice,
+            body.language,
+            len(phrases),
+            phrases[0][:60],
+        )
+
+        sr = int(model.sampling_rate)
+
+        async def stream_body():
+            first = True
+            for phrase in phrases:
+                wav = await run_in_threadpool(
+                    _mono_waveform_from_generate,
+                    model,
+                    text=phrase,
+                    language=body.language,
+                    ref_audio=ref_audio,
+                    ref_text=ref_text_resolved,
+                )
+                if first:
+                    payload = await run_in_threadpool(
+                        _wav_bytes_pcm_s16_mono, sample_rate=sr, wav=wav
+                    )
+                    first = False
+                else:
+                    payload = await run_in_threadpool(
+                        _pcm_s16le_mono_payload_match_torchaudio,
+                        sample_rate=sr,
+                        wav=wav,
+                    )
+                yield struct.pack(">I", len(payload)) + payload
+
+        return StreamingResponse(
+            stream_body(),
+            media_type="application/octet-stream",
+            headers={
+                STREAM_FORMAT_HEADER: STREAM_FORMAT_VALUE,
+                "Cache-Control": "no-store",
+                "X-Accel-Buffering": "no",
+            },
+        )
 
     return app
 

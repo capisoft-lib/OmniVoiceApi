@@ -30,6 +30,9 @@ output.json
 *.key
 *.pfx
 
+# Local Docker bind mounts (large; never send to build context)
+docker-data/
+
 # Docs and non-runtime files (image still copies omnivoice + apps)
 docs/
 CHANGELOG.md

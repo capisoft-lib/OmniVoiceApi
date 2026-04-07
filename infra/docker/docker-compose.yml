@@ -3,19 +3,21 @@ services:
     build:
       context: ../..
       dockerfile: infra/docker/Dockerfile
-    image: omnivoice-api:latest
+    image: omnivoice-api:cuda12.8
     ports:
       - "8765:8765"
     environment:
       OMNIVOICE_MODEL: ${OMNIVOICE_MODEL:-k2-fsa/OmniVoice}
       OMNIVOICE_VOICES_DIR: /data/voices
       OMNIVOICE_DEVICE: ${OMNIVOICE_DEVICE:-cuda}
+      # Persist HF hub + transformers cache (models, snapshots)
       HF_HOME: /root/.cache/huggingface
+      TRANSFORMERS_CACHE: /root/.cache/huggingface/hub
+      # Optional: reduce GPU memory fragmentation under load
+      # PYTORCH_CUDA_ALLOC_CONF: expandable_segments:True
     volumes:
-      - hf_cache:/root/.cache/huggingface
-      - voices_data:/data/voices
+      # Host folders (repo root docker-data/ by default); survives container recreate
+      - ${OMNIVOICE_HF_BIND:-../../docker-data/huggingface}:/root/.cache/huggingface
+      - ${OMNIVOICE_VOICES_BIND:-../../docker-data/voices}:/data/voices
     gpus: all
-
-volumes:
-  hf_cache:
-  voices_data:
+    shm_size: "2gb"

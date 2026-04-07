@@ -85,11 +85,15 @@ dotnet build examples/maui/OmniVoiceApi.Maui/OmniVoiceApi.Maui.csproj -f net9.0-
 
 Targets: **Windows** (tested build), **Android** (cleartext HTTP enabled for dev; use `http://10.0.2.2:8765` from the emulator). iOS / Mac Catalyst are included by the template but not validated here.
 
-### 5) Docker API
+### 5) Docker API (CUDA)
+
+GPU image (`omnivoice-api:cuda12.8`, base NVIDIA CUDA 12.8 + PyTorch cu128). Requires [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html) on the host.
 
 ```bash
 docker compose -f infra/docker/docker-compose.yml up --build
 ```
+
+Or: `pwsh -File infra/docker/deploy.ps1` / `bash infra/docker/deploy.sh`
 
 Details: [infra/docker/README.md](infra/docker/README.md).
 

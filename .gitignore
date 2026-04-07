@@ -58,6 +58,9 @@ last_recording.wav
 artifacts/
 *.nupkg
 
+# Docker Compose: HF downloads + API voices (large; not committed)
+docker-data/
+
 # OmniVoice research / training (local)
 /.cache*
 /exp*/
