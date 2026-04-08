@@ -106,7 +106,12 @@ docker run --gpus all --shm-size=2g -p 8765:8765 `
 
 ## Performance (reference)
 
-On **NVIDIA RTX 3090**, a sample run reported **~3.4 s** server-side for **~28 s** of generated audio (conditions: model warm, batch size 1, exact text/settings may vary).
+Sample **`POST /tts`** (model warm, batch size 1; wall-clock synthesis time — conditions may vary):
+
+| GPU | Synthesis time | Generated audio |
+|-----|----------------|-----------------|
+| **RTX 3090** | **3.4 s** | **22 s** |
+| **RTX 3060 Ti** | **5.4 s** | **22 s** |
 
 ## Publish (registry)
 
