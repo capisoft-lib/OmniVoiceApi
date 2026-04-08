@@ -40,6 +40,26 @@ docker compose up --build -d
 - First start downloads the model into **`docker-data/huggingface/`** on the host (can take several minutes).
 - Reference voices: **`docker-data/voices/`** → `/data/voices` (or `POST /voices`).
 
+## Deploy on a remote host (SSH)
+
+From your workstation (with SSH access to the server), using the **pre-built Hub image**:
+
+```powershell
+# Windows — replace user@10.1.200.10 with your SSH login
+pwsh -File infra/docker/deploy-remote.ps1 -SshTarget 'user@10.1.200.10'
+```
+
+This copies [remote-docker-run.sh](remote-docker-run.sh) to `/tmp/` and runs it with `sudo`. The script pulls **`capitaine/omnivoice-api:cuda12.8`**, recreates container **`omnivoice-api`**, maps port **8765**, and uses Docker volumes **`omnivoice_hf`** / **`omnivoice_voices`** for cache and voices. Override defaults by editing the script or setting env vars on the server before running (see `OMNIVOICE_*` at the top of `remote-docker-run.sh`).
+
+Manual equivalent on the server:
+
+```bash
+docker pull capitaine/omnivoice-api:cuda12.8
+sudo bash /path/to/infra/docker/remote-docker-run.sh
+```
+
+API URL after deploy: **`http://<server-ip>:8765/docs`** (e.g. `http://10.1.200.10:8765/docs`).
+
 ### Streaming (`POST /tts/stream`)
 
 Chunked responses use **`X-OmniVoice-Stream-Format: wav-first-pcm-tail-v1`**: first HTTP chunk payload is a mono PCM16 WAV; later payloads are raw s16le audio to append. The image sets **`Cache-Control: no-store`** and **`X-Accel-Buffering: no`** on that route to reduce proxy buffering. If you terminate TLS or proxy in front of the container, enable streaming (e.g. nginx `proxy_buffering off` for that location). See **`apps/api/README-API.md`** for framing and a merge example.
