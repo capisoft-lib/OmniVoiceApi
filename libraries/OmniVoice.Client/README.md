@@ -1,12 +1,25 @@
 # OmniVoice.Client
 
-.NET 8 library for calling **OmniVoiceApi** (`GET /health`, `POST /voices`, `POST /tts`).
+.NET 9 library for calling **OmniVoiceApi** (`GET /health`, `POST /voices`, `POST /tts`).
 
-## Install (local project reference)
+[![NuGet](https://img.shields.io/nuget/v/OmniVoice.Client.svg)](https://www.nuget.org/packages/OmniVoice.Client)
+
+## Install
+
+**From NuGet.org:**
 
 ```bash
 dotnet add package OmniVoice.Client
-# or: ProjectReference to src/OmniVoice.Client/OmniVoice.Client.csproj
+```
+
+**Links:**
+
+- [NuGet package](https://www.nuget.org/packages/OmniVoice.Client)
+
+**From this repository** (development):
+
+```bash
+dotnet add reference path/to/libraries/OmniVoice.Client/src/OmniVoice.Client/OmniVoice.Client.csproj
 ```
 
 ## Usage

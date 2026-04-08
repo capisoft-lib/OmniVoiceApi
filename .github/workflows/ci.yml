@@ -36,6 +36,20 @@ jobs:
         run: |
           pip-audit -r apps/api/requirements-api.txt
 
+  nuget-pack:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "9.0.x"
+
+      - name: Pack OmniVoice.Client
+        run: |
+          dotnet pack libraries/OmniVoice.Client/src/OmniVoice.Client/OmniVoice.Client.csproj -c Release -o "${{ runner.temp }}/nupkg"
+
   maui-build:
     runs-on: windows-latest
     steps:

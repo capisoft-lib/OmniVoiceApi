@@ -10,7 +10,7 @@ Thank you for your interest in improving OmniVoice and OmniVoiceApi.
 ## Development setup
 
 1. Python: create a virtual environment, install PyTorch for your platform, then `pip install -e ".[api]"` from the repo root.
-2. .NET: install the [.NET 8 SDK](https://dotnet.microsoft.com/download). Build `libraries/OmniVoice.Client/OmniVoice.Client.sln`.
+2. .NET: install the [.NET 9 SDK](https://dotnet.microsoft.com/download). Build `libraries/OmniVoice.Client/OmniVoice.Client.sln`.
 3. MAUI: install the .NET MAUI workload (`dotnet workload install maui`) to build the sample under `examples/maui/`.
 
 ## Pull requests

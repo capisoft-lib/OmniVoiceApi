@@ -10,6 +10,10 @@
 
 **OmniVoiceApi** is a production-style monorepo: **FastAPI** text-to-speech (voice cloning, streaming), **Docker** (CUDA), Python and **.NET** clients, and a sample **MAUI** app. Inference uses the open **OmniVoice** weights ([Hugging Face `k2-fsa/OmniVoice`](https://huggingface.co/k2-fsa/OmniVoice)); research, training, and the core Python package live in the **[upstream GitHub repo](https://github.com/k2-fsa/OmniVoice)** — this README focuses on **this** API layout only.
 
+**Libraries:**
+
+- **`libraries/OmniVoice.Client`:** .NET HTTP client for API integration. [![NuGet](https://img.shields.io/nuget/v/OmniVoice.Client.svg)](https://www.nuget.org/packages/OmniVoice.Client)
+
 > **Speech-to-text (sibling stack):** **[FastWhisperApi](https://github.com/capisoft-lib/FastWhisperApi)** — same idea (HTTP API, Docker, clients), for transcription/translation.
 
 **Jump to:** [Layout](#repository-layout) · [Quick start](#quick-start) · [HTTP API](#http-api) · [Performance](#performance) · [Docker Hub](#5-docker-api-cuda)
@@ -62,12 +66,27 @@ python examples/console-ui/synthesize_and_save.py --url http://127.0.0.1:8765 --
 
 ### 3) C# client
 
+**Install from NuGet.org:**
+
+[![NuGet](https://img.shields.io/nuget/v/OmniVoice.Client.svg)](https://www.nuget.org/packages/OmniVoice.Client)
+
+```bash
+dotnet add package OmniVoice.Client
+```
+
+**Links:**
+
+- [NuGet package](https://www.nuget.org/packages/OmniVoice.Client)
+- [Source in this repo](libraries/OmniVoice.Client/)
+
+Build from this repo and run the example:
+
 ```bash
 dotnet build libraries/OmniVoice.Client/OmniVoice.Client.sln
 dotnet run --project libraries/OmniVoice.Client/examples/OmniVoice.Client.Example -- http://127.0.0.1:8765
 ```
 
-[libraries/OmniVoice.Client/README.md](libraries/OmniVoice.Client/README.md)
+More detail: [libraries/OmniVoice.Client/README.md](libraries/OmniVoice.Client/README.md)
 
 ### 4) MAUI sample
 

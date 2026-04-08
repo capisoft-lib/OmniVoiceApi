@@ -1,0 +1,66 @@
+# Publishes libraries/OmniVoice.Client to nuget.org (same role as FastWhisper.Client).
+#
+# Setup:
+#   Repository secret NUGET_API_KEY — an API key from https://www.nuget.org/account/apikeys
+#
+# Release:
+#   git tag OmniVoice.Client/v1.0.0
+#   git push origin OmniVoice.Client/v1.0.0
+#
+# Or: Actions → "Publish OmniVoice.Client (NuGet)" → Run workflow → set version.
+
+name: Publish OmniVoice.Client (NuGet)
+
+on:
+  push:
+    tags:
+      - "OmniVoice.Client/v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Semantic version to publish (e.g. 1.0.0)"
+        required: true
+        default: "1.0.0"
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "9.0.x"
+
+      - name: Resolve package version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "value=${{ github.event.inputs.version }}" >> "$GITHUB_OUTPUT"
+          else
+            REF="${{ github.ref_name }}"
+            echo "value=${REF#OmniVoice.Client/v}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Pack
+        run: |
+          dotnet pack libraries/OmniVoice.Client/src/OmniVoice.Client/OmniVoice.Client.csproj \
+            -c Release \
+            -o "${{ runner.temp }}/nupkg" \
+            -p:Version="${{ steps.version.outputs.value }}"
+
+      - name: Push to nuget.org
+        env:
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+        run: |
+          if [ -z "${NUGET_API_KEY}" ]; then
+            echo "NUGET_API_KEY is not set; add it under repo Settings → Secrets."
+            exit 1
+          fi
+          dotnet nuget push "${{ runner.temp }}/nupkg"/*.nupkg \
+            -k "${NUGET_API_KEY}" \
+            -s https://api.nuget.org/v3/index.json \
+            --skip-duplicate

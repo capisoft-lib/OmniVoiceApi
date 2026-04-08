@@ -7,7 +7,7 @@ Text-to-speech is powered by [**OmniVoice**](https://huggingface.co/k2-fsa/OmniV
 - `apps/api`: FastAPI service exposing `/health`, `/voices`, and `/tts`.
 - `examples/console-ui`: Python HTTP client (`synthesize_and_save.py`) for terminal usage.
 - `examples/maui`: cross-platform .NET MAUI sample (Windows / Android; iOS / Mac Catalyst from template).
-- `libraries/OmniVoice.Client`: .NET 8 client library for the same HTTP API.
+- `libraries/OmniVoice.Client`: .NET 9 client library for the same HTTP API.
 - `infra/docker`: container build and Compose deployment for the API.
 
 ## Data flow
