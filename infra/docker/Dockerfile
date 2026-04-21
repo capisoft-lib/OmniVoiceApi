@@ -7,7 +7,7 @@
 # Run (requires nvidia-container-toolkit + driver on host, e.g. RTX 3090):
 #   docker run --gpus all -p 8765:8765 ... omnivoice-api:cuda12.8
 
-FROM nvidia/cuda:12.8.0-runtime-ubuntu22.04
+FROM nvidia/cuda:13.2.1-runtime-ubuntu22.04
 
 ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONUNBUFFERED=1 \
