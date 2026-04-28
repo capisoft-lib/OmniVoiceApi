@@ -3,4 +3,4 @@
 #
 # Or pin runtime deps when not using pyproject (after torch/transformers stack):
 fastapi>=0.115.0
-uvicorn[standard]>=0.32.0
+uvicorn[standard]>=0.46.0
